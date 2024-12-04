@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Encrypt Data</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-family: monospace;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .output {
+      width: 100%;
+      height: 100px;
+      margin-top: 10px;
+      padding: 10px;
+      font-family: monospace;
+      background-color: #f5f5f5;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h2>Encrypt Data</h2>
+    <textarea id="dataInput"
+      placeholder="Enter your data to encrypt (e.g., long paragraph or webpage content)"></textarea>
+    <br>
+    <button onclick="encryptData()">Encrypt Data</button>
+    <div>
+      <h3>Encrypted Data (Copy this to send to your backend)</h3>
+      <textarea id="outputData" readonly></textarea>
+    </div>
+  </div>
+
+  <script>
+    const name = "IamAEngineer"; 
+    async function deriveKey() {
+      const enc = new TextEncoder();
+      const keyMaterial = await window.crypto.subtle.importKey(
+        "raw",
+        enc.encode(name),
+        "PBKDF2",
+        false,
+        ["deriveKey"]
+      );
+
+      const key = await window.crypto.subtle.deriveKey({
+          name: "PBKDF2",
+          salt: enc.encode("IamAEngineer"),
+          iterations: 100000,
+          hash: "SHA-256",
+        },
+        keyMaterial, {
+          name: "AES-GCM",
+          length: 256
+        },
+        false,
+        ["encrypt", "decrypt"]
+      );
+      return key;
+    }
+
+
+    function arrayBufferToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      bytes.forEach((byte) => {
+        binary += String.fromCharCode(byte);
+      });
+      return window.btoa(binary);
+    }
+
+
+    async function encryptData() {
+      const inputData = document.getElementById('dataInput').value;
+      if (inputData.trim() === "") {
+        alert("Please enter some data.");
+        return;
+      }
+
+      const key = await deriveKey();
+      const encoder = new TextEncoder();
+      const encodedData = encoder.encode(inputData);
+      const iv = window.crypto.getRandomValues(new Uint8Array(12)); 
+
+      const encryptedData = await window.crypto.subtle.encrypt({
+          name: "AES-GCM",
+          iv
+        },
+        key,
+        encodedData
+      );
+
+      const encryptedBase64 = arrayBufferToBase64(encryptedData);
+      const ivBase64 = arrayBufferToBase64(iv);
+
+      document.getElementById('outputData').value = `${encryptedBase64}:${ivBase64}`;
+    }
+  </script>
+
+</body>
+
+</html>
